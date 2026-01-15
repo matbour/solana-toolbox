@@ -26,7 +26,7 @@ export function SignTransactionForm() {
 	const [txSignature, setTxSignature] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
-	const [failedTxBase64, setFailedTxBase64] = useState<string | null>(null);
+	const [failedTxData, setFailedTxData] = useState<{ message: string; signatures: string[] } | null>(null);
 
 	const {
 		register,
@@ -55,7 +55,7 @@ export function SignTransactionForm() {
 		setError(null);
 		setSignedTransaction(null);
 		setTxSignature(null);
-		setFailedTxBase64(null);
+		setFailedTxData(null);
 
 		try {
 			let txBytes: Uint8Array;
@@ -82,16 +82,16 @@ export function SignTransactionForm() {
 			setSignedTransaction(signedEncoded);
 
 			if (data.broadcast) {
-				// Store base64 for potential simulation error
-				const txBase64ForInspector = btoa(String.fromCharCode(...signedBytes));
 				try {
 					const signature = await connection.sendTransaction(signedTx, {
 						skipPreflight: data.skipSimulation,
 					});
 					setTxSignature(signature);
 				} catch (broadcastErr) {
-					// Store the transaction for inspector link on simulation failure
-					setFailedTxBase64(txBase64ForInspector);
+					// Store message and signatures for inspector link on simulation failure
+					const messageBase64 = btoa(String.fromCharCode(...signedTx.message.serialize()));
+					const signatures = signedTx.signatures.map((sig) => bs58.encode(sig));
+					setFailedTxData({ message: messageBase64, signatures });
 					throw broadcastErr;
 				}
 			}
@@ -111,9 +111,13 @@ export function SignTransactionForm() {
 		return `https://explorer.solana.com/tx/${signature}${cluster}`;
 	};
 
-	const getInspectorUrl = (txBase64: string) => {
+	const getInspectorUrl = (data: { message: string; signatures: string[] }) => {
 		const cluster = network === WalletAdapterNetwork.Mainnet ? "mainnet" : network;
-		return `https://explorer.solana.com/tx/inspector?cluster=${cluster}&message=${encodeURIComponent(txBase64)}`;
+		// Double URL encode signatures JSON array and message (as expected by Solana Explorer)
+		const signaturesJson = JSON.stringify(data.signatures);
+		const encodedSignatures = encodeURIComponent(encodeURIComponent(signaturesJson));
+		const encodedMessage = encodeURIComponent(encodeURIComponent(data.message));
+		return `https://explorer.solana.com/tx/inspector?cluster=${cluster}&signatures=${encodedSignatures}&message=${encodedMessage}`;
 	};
 
 	return (
@@ -173,9 +177,9 @@ export function SignTransactionForm() {
 				<div className="alert alert-error">
 					<div className="flex flex-col gap-2 w-full">
 						<span>{error}</span>
-						{failedTxBase64 && (
+						{failedTxData && (
 							<a
-								href={getInspectorUrl(failedTxBase64)}
+								href={getInspectorUrl(failedTxData)}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="btn btn-sm btn-outline btn-error"
