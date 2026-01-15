@@ -14,6 +14,7 @@ interface FormData {
 	transaction: string;
 	encoding: Encoding;
 	broadcast: boolean;
+	skipSimulation: boolean;
 }
 
 export function SignTransactionForm() {
@@ -36,6 +37,7 @@ export function SignTransactionForm() {
 			transaction: "",
 			encoding: "base58",
 			broadcast: false,
+			skipSimulation: false,
 		},
 	});
 
@@ -78,7 +80,9 @@ export function SignTransactionForm() {
 			setSignedTransaction(signedEncoded);
 
 			if (data.broadcast) {
-				const signature = await connection.sendTransaction(signedTx);
+				const signature = await connection.sendTransaction(signedTx, {
+					skipPreflight: data.skipSimulation,
+				});
 				setTxSignature(signature);
 			}
 		} catch (err) {
@@ -134,9 +138,19 @@ export function SignTransactionForm() {
 					<span className="label-text">Broadcast transaction after signing</span>
 				</label>
 				{broadcast && (
-					<span className="text-warning text-sm ml-10">
-						Warning: This will send the transaction to the network. Make sure you trust the transaction contents.
-					</span>
+					<>
+						<span className="text-warning text-sm ml-10">
+							Warning: This will send the transaction to the network. Make sure you trust the transaction contents.
+						</span>
+						<label className="label cursor-pointer justify-start gap-4 ml-6">
+							<input
+								type="checkbox"
+								className="checkbox checkbox-secondary checkbox-sm"
+								{...register("skipSimulation")}
+							/>
+							<span className="label-text text-sm">Skip transaction simulation (preflight)</span>
+						</label>
+					</>
 				)}
 			</div>
 
