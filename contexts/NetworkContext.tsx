@@ -24,9 +24,9 @@ export function useNetwork() {
 }
 
 const ENDPOINTS: Record<WalletAdapterNetwork, string> = {
-	[WalletAdapterNetwork.Devnet]: "https://api.devnet.solana.com",
+	[WalletAdapterNetwork.Devnet]: process.env.NEXT_PUBLIC_RPC_DEVNET || "https://api.devnet.solana.com",
 	[WalletAdapterNetwork.Testnet]: "https://api.testnet.solana.com",
-	[WalletAdapterNetwork.Mainnet]: "https://api.mainnet-beta.solana.com",
+	[WalletAdapterNetwork.Mainnet]: process.env.NEXT_PUBLIC_RPC_MAINNET || "https://api.mainnet-beta.solana.com",
 };
 
 export function NetworkProvider({ children }: { children: ReactNode }) {
