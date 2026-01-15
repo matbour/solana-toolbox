@@ -26,6 +26,7 @@ export function SignTransactionForm() {
 	const [txSignature, setTxSignature] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
+	const [failedTxBase64, setFailedTxBase64] = useState<string | null>(null);
 
 	const {
 		register,
@@ -54,6 +55,7 @@ export function SignTransactionForm() {
 		setError(null);
 		setSignedTransaction(null);
 		setTxSignature(null);
+		setFailedTxBase64(null);
 
 		try {
 			let txBytes: Uint8Array;
@@ -80,10 +82,18 @@ export function SignTransactionForm() {
 			setSignedTransaction(signedEncoded);
 
 			if (data.broadcast) {
-				const signature = await connection.sendTransaction(signedTx, {
-					skipPreflight: data.skipSimulation,
-				});
-				setTxSignature(signature);
+				// Store base64 for potential simulation error
+				const txBase64ForInspector = btoa(String.fromCharCode(...signedBytes));
+				try {
+					const signature = await connection.sendTransaction(signedTx, {
+						skipPreflight: data.skipSimulation,
+					});
+					setTxSignature(signature);
+				} catch (broadcastErr) {
+					// Store the transaction for inspector link on simulation failure
+					setFailedTxBase64(txBase64ForInspector);
+					throw broadcastErr;
+				}
 			}
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to sign transaction");
@@ -99,6 +109,11 @@ export function SignTransactionForm() {
 	const getExplorerUrl = (signature: string) => {
 		const cluster = network === WalletAdapterNetwork.Mainnet ? "" : `?cluster=${network}`;
 		return `https://explorer.solana.com/tx/${signature}${cluster}`;
+	};
+
+	const getInspectorUrl = (txBase64: string) => {
+		const cluster = network === WalletAdapterNetwork.Mainnet ? "mainnet" : network;
+		return `https://explorer.solana.com/tx/inspector?cluster=${cluster}&message=${encodeURIComponent(txBase64)}`;
 	};
 
 	return (
@@ -156,7 +171,19 @@ export function SignTransactionForm() {
 
 			{error && (
 				<div className="alert alert-error">
-					<span>{error}</span>
+					<div className="flex flex-col gap-2 w-full">
+						<span>{error}</span>
+						{failedTxBase64 && (
+							<a
+								href={getInspectorUrl(failedTxBase64)}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="btn btn-sm btn-outline btn-error"
+							>
+								Simulate on Solana Explorer
+							</a>
+						)}
+					</div>
 				</div>
 			)}
 
