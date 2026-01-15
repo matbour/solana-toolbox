@@ -1,0 +1,40 @@
+# dependencies
+node_modules
+
+# Next.js
+.next
+out
+
+# output
+dist
+*.tgz
+
+# code coverage
+coverage
+*.lcov
+
+# logs
+logs
+*.log
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# dotenv environment variable files
+.env
+.env*.local
+
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+
+# IDEs
+.idea
+.vscode
+
+# Finder (MacOS)
+.DS_Store
+
+# Vercel
+.vercel
+
+# Bun lockfile should be committed for CI
